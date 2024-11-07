@@ -5,9 +5,12 @@
 #include <fstream>
 #include <sstream>
 #include <ctype.h>
+#include <cmath>
 #include "bdecode.h"
 #include "sha1/sha1.h"
 #include "trackerInfo/trackerComm.h"
+
+const int SHA1_HASH_LENGTH = 20;
 
 std::string torrentToString() {
 
@@ -29,7 +32,7 @@ std::string torrentToString() {
 std::string decodeInt(std::string& torrentFileString, int& i) {
     int j = i;
     while (torrentFileString[j] != 'e') {
-        j++;
+        j++;                                //decodes bencode int
     }
     std::string decodedInt = torrentFileString.substr(i + 1, j-i-1);
     i = j + 1;
@@ -38,7 +41,7 @@ std::string decodeInt(std::string& torrentFileString, int& i) {
 
 std::string decodeString(std::string& torrentFileString, int& i) {
     int j = i;
-    while (torrentFileString[j] != ':') {
+    while (torrentFileString[j] != ':') {                   //decodes bencode string
         j++;
     }
     int stringLength = stoi(torrentFileString.substr(i,j));
@@ -49,7 +52,7 @@ std::string decodeString(std::string& torrentFileString, int& i) {
 std::vector<std::string> decodeList(std::string& torrentFileString, int& i) {
     std::string torrentListItem;
     std::vector<std::string> torrentContentList;
-    std::vector<std::string> listStack;
+    std::vector<std::string> listStack;             //decodes bencode list
     listStack.push_back("l");
     i++;
 
@@ -74,12 +77,38 @@ std::vector<std::string> decodeList(std::string& torrentFileString, int& i) {
     return torrentContentList;
 };
 
-std::vector<peerData> decodePeers(std::string& announceContentString) {
-    int index;
+std::vector<std::string> createPieceHashArray(int& numOfPieces, std::string piecesString) {
+    std::vector<std::string> pieceHashArray(numOfPieces);
 
-    while (index < announceContentString.length()) {
-
+    for (int i = 0; i < numOfPieces; i++) {
+        pieceHashArray[i] = piecesString.substr(i*20, 20);
     }
+    return pieceHashArray;
+}
+
+std::vector<peer> decodePeers(std::string& announceContentString) {  //grabs ip addresses & ports of each peer
+    int ipIndex = 0;                        
+    std::vector<peer> peers;
+    std::string ipString;
+    int ipPort;
+    peer peer;
+
+
+    while (ipIndex < announceContentString.length()) {
+        ipString += std::to_string(int(static_cast<unsigned char>(announceContentString[ipIndex]))) + '.'
+                + std::to_string(int(static_cast<unsigned char>(announceContentString[ipIndex + 1]))) + '.'
+                + std::to_string(int(static_cast<unsigned char>(announceContentString[ipIndex + 2]))) + '.'
+                + std::to_string(int(static_cast<unsigned char>(announceContentString[ipIndex + 3])));
+        ipPort = (int(static_cast<unsigned char>(announceContentString[ipIndex + 4])) << 8)
+                             | int(static_cast<unsigned char>(announceContentString[ipIndex + 5]));
+        peer.ip = ipString;
+        peer.port = ipPort;
+
+        peers.push_back(peer);
+        ipString = "";
+        ipIndex += 6;
+    }
+    return peers;
 }
 
 
@@ -158,6 +187,19 @@ torrentProperties decodeTorrent() {
 
 
     }
+    torrentContents.numOfPieces = std::ceil(torrentContents.length/torrentContents.pieceLength);
+
+    torrentContents.pieceHashes = createPieceHashArray(torrentContents.numOfPieces, torrentContents.pieces);
+
+    torrentContents.fileBuiltPieces = std::vector<std::vector<unsigned char>>(torrentContents.numOfPieces, std::vector<unsigned char>(torrentContents.pieceLength, '0'));
+
+
+    torrentContents.piecesToBeDownloaded = std::vector<int>(torrentContents.numOfPieces);
+    for (int j = 0; j < torrentContents.numOfPieces; j++) {   //need to put pieces in backwards for O(1) deletion/insertion
+        torrentContents.piecesToBeDownloaded[j] = torrentContents.numOfPieces - j - 1;
+    }
+
+
     //torrentContents.infoHash = torrentFileString[infoHashEndIndex];
     std::cout << "stsart index: " << torrentFileString[infoHashStartIndex] << std::endl;
     return torrentContents;
@@ -191,11 +233,11 @@ announceProperties decodeAnnounceResponse(std::string& announceString) {
                 if (announceDataSection == "interval") {
                      //std::cout << "Interval waa: " << announceContentString << std::endl;
                     std::cout << "Interval waa: " << announceContentString << std::endl;
-                    announceContents.interval = stoi(announceContentString);
+                    announceContents.interval = std::stoi(announceContentString);
                 }
                 else if (announceDataSection == "peers") {
                     std::cout << "peers: " << announceContentString << std::endl;
-                    //announceContents.peers = decodePeers(announceContentString);
+                    announceContents.peers = decodePeers(announceContentString);
                 }
                 announceDataSection = "";
             }

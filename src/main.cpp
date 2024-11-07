@@ -1,6 +1,8 @@
 #include <iostream>
 #include "bencode/bdecode.h"
 #include "trackerInfo/trackerComm.h"
+#include "peerComm/peerComm.h"
+#include <thread>
 
   // Function to print torrentProperties struct
   void printTorrentProperties(const torrentProperties &tp) {
@@ -12,6 +14,7 @@
       std::cout << "Length: " << tp.length << std::endl;
       std::cout << "Name: " << tp.name << std::endl;
       std::cout << "Piece Length: " << tp.pieceLength << std::endl;
+      std::cout << "Number of pieces: " << tp.numOfPieces << std::endl;
       //std::cout << "Pieces: " << tp.pieces << std::endl;
       std::cout << "Info Hash: " << tp.infoHash << std::endl;
 
@@ -24,7 +27,10 @@
 
 void printAnnounceProperties(const announceProperties &ap) {
   std::cout << "Interval: " << ap.interval << std::endl;
-  //std::cout << "Peers: " << ap.peers << std::endl;
+  std::cout << "Peers: " << ap.peers.size() << std::endl;
+  for (const auto &listItem : ap.peers) {
+          std::cout << "IP: " << listItem.ip << " Port: " << listItem.port << std::endl;
+      }
 }
 
 int main() {
@@ -37,5 +43,16 @@ int main() {
   printTorrentProperties(torrentContent);
   printAnnounceProperties(announceContent);
 
+  std::vector<std::thread> peerThreads(announceContent.peers.size());
+  for (int i= 0; i < announceContent.peers.size(); i++) {
+    peerThreads[i] = std::thread(communicateWithPeers, std::ref(announceContent), std::ref(torrentContent), std::ref(announceContent.peers[i]));
+    //peerThreads[i].join();
+  }
+  for (int j=0; j < announceContent.peers.size(); j++) {
+    peerThreads[j].join();
+  }
+
+  //communicateWithPeers(announceContent, torrentContent);
+  
   
 };

@@ -31,10 +31,10 @@ std::string createAnnounceQuery(torrentProperties& torrentContents) {
     std::string port = "6881";
 
 
-    std::string peerID = generatePeerID();
+    torrentContents.peerID = generatePeerID();
 
     queryURL = torrentContents.announce + "?info_hash=" + torrentContents.infoHash + "&peer_id=" +
-    peerID + "&port=" + port + "&uploaded=0&downloaded=0&compact=1&left="+ std::to_string(torrentContents.length);
+    torrentContents.peerID + "&port=" + port + "&uploaded=0&downloaded=0&compact=1&left="+ std::to_string(torrentContents.length);
 
     return queryURL;
 };

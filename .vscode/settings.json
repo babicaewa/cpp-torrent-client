@@ -67,6 +67,9 @@
         "iterator": "cpp",
         "utility": "cpp",
         "__bits": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "deque": "cpp",
+        "list": "cpp",
+        "thread": "cpp"
     }
 }
