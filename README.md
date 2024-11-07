@@ -1,1 +1,3 @@
 # cpp-torrent-client
+
+This project is a simple torrent client, which takes a torrent file, communicates with a tracker, and communicates with other IP addresses from the trackers to download the full file. This project was written for a fun project as the technology is interesting to me, and it was written in c++, as a way to both learn the language better. So please, go easy on me if you are reading the code ;)
