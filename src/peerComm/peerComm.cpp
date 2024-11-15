@@ -16,7 +16,7 @@
 const int MAX_BLOCK_SIZE = 16384;
 const int MAX_SIMULTANEOUS_REQUESTS = 16;
 const ssize_t EXPECTED_MSG_SIZE = MAX_BLOCK_SIZE + 13;
-const int MAX_WAIT_TIME = 10;
+const int MAX_WAIT_TIME = 20;
 
 std::vector<unsigned char> decodeHashtoPureHex(std::string hashedString) {  //need to convert url encoded hash to pure hex
     std::vector<unsigned char> decodedHash;
@@ -133,6 +133,7 @@ bool peerHasPiece(std::vector<unsigned char>& bitfield, int& index) {
     return bitfield[byteIndex] >> ((7-offset) & 1) != 0;
 }
 
+/*
 std::map<int, std::string>PeerPieceInfo(std::vector<unsigned char>& bitfield, int& totalPieces) {
     std::map<int, std::string> peerPieceInfoMap;
 
@@ -146,6 +147,8 @@ std::map<int, std::string>PeerPieceInfo(std::vector<unsigned char>& bitfield, in
     };
     return peerPieceInfoMap;
 };
+
+*/
 
 int connectToPeer(peer& peer, torrentProperties& torrentContents) {
 
@@ -303,9 +306,9 @@ int sendRequestMsgs(int& clientSocket, int& pieceIndexForDownload, int& startInd
 }
 
 int downloadRequestedPieces(int& clientSocket, int& pieceIndexForDownload, int& startIndex, int endIndex, std::vector<unsigned char>& fullPieceData, torrentProperties& torrentContent, std::mutex& queueMutex, peerStatus& peerStatusInfo) {
-    std::vector<unsigned char> pieceBlockBuffer(EXPECTED_MSG_SIZE, 0);
+    std::vector<unsigned char> pieceBlockBuffer(EXPECTED_MSG_SIZE, 0);  //does not account for partial piece!!!!
     for (int i = startIndex; i < endIndex; i++) {
-        auto startTime = std::chrono::steady_clock::now();
+       auto startTime = std::chrono::steady_clock::now();
 
         ssize_t bytesRead = 0;
         while (bytesRead < EXPECTED_MSG_SIZE) {
@@ -315,7 +318,7 @@ int downloadRequestedPieces(int& clientSocket, int& pieceIndexForDownload, int& 
                 return -1;
             }
             ssize_t peerBlockRepsonse = read(clientSocket, pieceBlockBuffer.data()+bytesRead, EXPECTED_MSG_SIZE-bytesRead);
-            if (peerBlockRepsonse <= 0) {
+            if (peerBlockRepsonse < 0) {
                 return -1;
             }
             bytesRead += peerBlockRepsonse;
@@ -381,8 +384,10 @@ int downloadAvailablePieces(int& clientSocket, torrentProperties& torrentContent
             auto queueIterator = torrentContent.piecesToBeDownloadedSet.begin();
             while (queueIterator != torrentContent.piecesToBeDownloadedSet.end()) {
                 int piece = *queueIterator;
-                if (peerHasPiece(peerStatusInfo.bitfield, piece)) {
-                    //std::cout << "peer has piece: " << piece << std::endl;      //change to iterator based not for!!!! MAYBE WILL FIX EVERYTHING!!!!!! INSHALLAH
+                if (peerHasPiece(peerStatusInfo.bitfield, piece) && torrentContent.fileBuiltPieces.find(piece) == torrentContent.fileBuiltPieces.end() 
+                && torrentContent.piecesQueue.find(piece) == torrentContent.piecesQueue.end()
+                && peer.problemDownloadingSet.find(piece) == peer.problemDownloadingSet.end()) {
+                    //std::cout << "peer has piece: " << piece << std::endl;      //fix this!!!
                     pieceIndexForDownload = piece;
                     torrentContent.piecesToBeDownloadedSet.erase(queueIterator);
                     torrentContent.piecesQueue.insert(piece);
@@ -398,6 +403,7 @@ int downloadAvailablePieces(int& clientSocket, torrentProperties& torrentContent
                 if(sendRequestMsgs(clientSocket,pieceIndexForDownload,blockRequestIndex,endBlockIndex) == 0) {
                     if (downloadRequestedPieces(clientSocket, pieceIndexForDownload, blockRequestIndex, endBlockIndex, fullPieceData, torrentContent, queueMutex, peerStatusInfo) == -1) {
                         std::cout << "failed to download the requested pieces for piece: " << pieceIndexForDownload << std::endl;
+                        //sleep(1);
                         //std::cout << "size of array of pieces needed left: " << torrentContent.piecesToBeDownloadedSet.size() << std::endl;
                         break;
                     };
@@ -425,6 +431,7 @@ int downloadAvailablePieces(int& clientSocket, torrentProperties& torrentContent
                     std::lock_guard<std::mutex> lock(queueMutex);
                     torrentContent.piecesToBeDownloadedSet.insert(pieceIndexForDownload);
                     torrentContent.piecesQueue.erase(pieceIndexForDownload);
+                    peer.problemDownloadingSet.insert(pieceIndexForDownload);
                     
                 }
                 
@@ -452,6 +459,12 @@ int downloadAvailablePieces(int& clientSocket, torrentProperties& torrentContent
                 std::cout << "Downloaded piece: " << pieceIndexForDownload << " from peer: " << peer.ip << ":" << peer.port << " |"
                 << std::setprecision(4) << (static_cast<float>(torrentContent.downloadedPieces.size()) / static_cast<float>(torrentContent.numOfPieces)) * 100 
                 << "%" << std::endl;
+
+                std::cout << "(";
+                for (auto const& pieceData: torrentContent.fileBuiltPieces) {
+                    std::cout << pieceData.first << " ";
+                }
+                std::cout << ")" << std::endl;
 
 
                 //std::cout << "size of array of pieces needed left: " << torrentContent.piecesToBeDownloadedSet.size() << std::endl;

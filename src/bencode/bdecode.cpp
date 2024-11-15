@@ -103,6 +103,8 @@ std::vector<peer> decodePeers(std::string& announceContentString) {  //grabs ip 
                              | int(static_cast<unsigned char>(announceContentString[ipIndex + 5]));
         peer.ip = ipString;
         peer.port = ipPort;
+        std::set<int> set;
+        peer.problemDownloadingSet = set;
 
         peers.push_back(peer);
         ipString = "";

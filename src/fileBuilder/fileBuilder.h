@@ -1,5 +1,5 @@
 #include <map>
-
+#include <vector>
 
 #ifndef FILEBUILDER_H
 #define FILEBUILDER_H

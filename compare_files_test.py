@@ -9,7 +9,7 @@ def calculate_file_hash(file_path, hash_func=hashlib.sha256):
 
 
 file1 = "/Users/Alex/Downloads/debian-mac-12.7.0-amd64-netinst.iso(fromthesource).iso"
-file2 = "/Users/Alex/Desktop/cpp-torrent-client/downloaded_files/debian-mac-12.7.0-amd64-netinst.iso"
+file2 = "/Users/Alex/Desktop/cpp-torrent-client/debian-mac-12.7.0-amd64-netinst.iso"
 
 # Hash comparison as initial check
 if calculate_file_hash(file1) == calculate_file_hash(file2):

@@ -7,7 +7,7 @@
 bool buildFile(std::map<int, std::vector<unsigned char>>& filePiecesData, std::string& fileName) {
     std::cout << "building the file: " << fileName << std::endl;
 
-    std::ofstream ofs("../downloaded_files/" + fileName);
+    std::ofstream ofs(fileName);
 
     if (!ofs.is_open()) {
         std::cerr << "Could not open the file to copy data to: " << strerror(errno) << std::endl;

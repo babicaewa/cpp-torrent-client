@@ -36,6 +36,7 @@ struct torrentProperties {
 struct peer {
     std::string ip;
     int port;
+    std::set<int> problemDownloadingSet;
 };
 
 struct announceProperties {
