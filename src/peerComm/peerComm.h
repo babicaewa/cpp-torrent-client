@@ -46,9 +46,9 @@ int sendInterestedMsg(int& clientSocket);
 
 std::vector<unsigned char> createRequestMsg(int piece, int beginIndex, int blockLength);
 
-void downloadAvailablePieces(std::map<int, std::string>& peerPieceInfo, int& clientSocket, torrentProperties& torrentContent);
+int downloadAvailablePieces(std::map<int, std::string>& peerPieceInfo, int& clientSocket, torrentProperties& torrentContent, std::mutex& queueMutex, peerStatus& peerStatusInfo, peer& peer);
 
-void communicateWithPeers(announceProperties& announceContent, torrentProperties& torrentContents, peer& peer);
+void communicateWithPeers(announceProperties& announceContent, torrentProperties& torrentContents, peer& peer, std::mutex& queueMutex);
 
 #endif
 

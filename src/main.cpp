@@ -2,7 +2,9 @@
 #include "bencode/bdecode.h"
 #include "trackerInfo/trackerComm.h"
 #include "peerComm/peerComm.h"
+#include "fileBuilder/fileBuilder.h"
 #include <thread>
+#include <mutex>
 
   // Function to print torrentProperties struct
   void printTorrentProperties(const torrentProperties &tp) {
@@ -44,15 +46,27 @@ int main() {
   printAnnounceProperties(announceContent);
 
   std::vector<std::thread> peerThreads(announceContent.peers.size());
+
+  std::mutex queueMutex;
   for (int i= 0; i < announceContent.peers.size(); i++) {
-    peerThreads[i] = std::thread(communicateWithPeers, std::ref(announceContent), std::ref(torrentContent), std::ref(announceContent.peers[i]));
+    peerThreads[i] = std::thread(communicateWithPeers, std::ref(announceContent), std::ref(torrentContent), std::ref(announceContent.peers[i]), std::ref(queueMutex));
     //peerThreads[i].join();
   }
   for (int j=0; j < announceContent.peers.size(); j++) {
     peerThreads[j].join();
   }
 
+  std::cout << "all pieces: (";
+  for (int j=0; j < torrentContent.fileBuiltPieces.size(); j++) {
+    std::cout << j<< ", ";
+  }
+  std::cout << ")" << std::endl;
+
+  std::cout << "finally all done :)" << std::endl;
   //communicateWithPeers(announceContent, torrentContent);
-  
+  bool fileBuilt = buildFile(torrentContent.fileBuiltPieces, torrentContent.name);
+  if (fileBuilt) {
+    std::cout << "successfully built the file and put it in the 'downloadedFiles' directory" << std::endl;
+  }
   
 };

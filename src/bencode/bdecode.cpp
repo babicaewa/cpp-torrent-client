@@ -191,15 +191,20 @@ torrentProperties decodeTorrent() {
 
     torrentContents.pieceHashes = createPieceHashArray(torrentContents.numOfPieces, torrentContents.pieces);
 
-    torrentContents.fileBuiltPieces = std::vector<std::vector<unsigned char>>(torrentContents.numOfPieces, std::vector<unsigned char>(torrentContents.pieceLength, '0'));
+    std::map <int, std::vector<unsigned char>> fileBuiltPieces;
+    torrentContents.fileBuiltPieces = fileBuiltPieces;
+    std::set<int> pq;
+    torrentContents.piecesQueue = pq;
+
+    //torrentContents.fileBuiltPieces = std::vector<std::vector<unsigned char>>(torrentContents.numOfPieces, std::vector<unsigned char>(torrentContents.pieceLength, '0'));
 
 
-    torrentContents.piecesToBeDownloaded = std::vector<int>(torrentContents.numOfPieces);
-    for (int j = 0; j < torrentContents.numOfPieces; j++) {   //need to put pieces in backwards for O(1) deletion/insertion
-        torrentContents.piecesToBeDownloaded[j] = torrentContents.numOfPieces - j - 1;
+    std::set<int> piecesToBeDownloadedSet;
+    for (int j = 0; j < torrentContents.numOfPieces; j++) {
+        piecesToBeDownloadedSet.insert(j);
     }
 
-
+    torrentContents.piecesToBeDownloadedSet = piecesToBeDownloadedSet;
     //torrentContents.infoHash = torrentFileString[infoHashEndIndex];
     std::cout << "stsart index: " << torrentFileString[infoHashStartIndex] << std::endl;
     return torrentContents;

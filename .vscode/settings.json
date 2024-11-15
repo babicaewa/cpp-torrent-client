@@ -70,6 +70,7 @@
         "functional": "cpp",
         "deque": "cpp",
         "list": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "set": "cpp"
     }
 }

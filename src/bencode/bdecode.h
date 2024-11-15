@@ -2,6 +2,7 @@
 #include <map>
 #include <vector>
 #include <set>
+#include <mutex>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -9,6 +10,7 @@
 
 #ifndef BDECODE_H
 #define BDECODE_H
+
 
 struct torrentProperties {
     std::string announce;
@@ -24,8 +26,9 @@ struct torrentProperties {
     std::string infoHash;
     std::string peerID;
     std::vector<std::string> pieceHashes;
-    std::vector<std::vector<unsigned char>> fileBuiltPieces; //i = piece number, j = piece bytes
-    std::vector<int> piecesToBeDownloaded;
+    std::map <int, std::vector<unsigned char>> fileBuiltPieces; //i = piece number, j = piece bytes
+    std::set<int> piecesQueue;
+    std::set<int> piecesToBeDownloadedSet;
     std::vector<int> downloadedPieces;
 };
 
