@@ -4,17 +4,6 @@
 #ifndef PEERCOMM_H
 #define PEERCOMM_H
 
-const int peerChoked = 0;
-const int peerUnchoked = 1;
-const int peerInterested = 2;
-const int peerNotInterested = 3;
-const int peerHave = 4;
-const int peerBitfield = 5;
-const int peerRequest = 6;
-const int peerPiece = 7;
-const int peerCancel = 8;
-
-
 struct peerStatus {
     peer peer;
     uint32_t bitFieldLength;
@@ -46,7 +35,9 @@ int sendInterestedMsg(int& clientSocket);
 
 std::vector<unsigned char> createRequestMsg(int piece, int beginIndex, int blockLength);
 
-int downloadAvailablePieces(std::map<int, std::string>& peerPieceInfo, int& clientSocket, torrentProperties& torrentContent, std::mutex& queueMutex, peerStatus& peerStatusInfo, peer& peer);
+int downloadRequestedPieceBlocks(int& clientSocket, int& pieceIndexForDownload, int& startIndex, int endIndex, std::vector<unsigned char>& fullPieceData, torrentProperties& torrentContent, std::mutex& queueMutex, peerStatus& peerStatusInfo, peer& peer);
+
+int downloadAvailablePieceBlocks(std::map<int, std::string>& peerPieceInfo, int& clientSocket, torrentProperties& torrentContent, std::mutex& queueMutex, peerStatus& peerStatusInfo, peer& peer);
 
 void communicateWithPeers(announceProperties& announceContent, torrentProperties& torrentContents, peer& peer, std::mutex& queueMutex);
 

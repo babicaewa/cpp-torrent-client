@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <ctype.h>
+#include <stdlib.h>
 #include <cmath>
 #include "bdecode.h"
 #include "sha1/sha1.h"
@@ -12,36 +13,50 @@
 
 const int SHA1_HASH_LENGTH = 20;
 
-std::string torrentToString() {
+/*
+    Reads the torrent File, and converts the file into a string
+*/
 
-    std::ifstream torrentFile("/Users/Alex/Downloads/debian-mac-12.7.0-amd64-netinst.iso.torrent"); //need to change evenutally
+std::string torrentToString(std::string filePath) {
 
+    std::ifstream torrentFile(filePath);
     std::ostringstream oss;
     oss << torrentFile.rdbuf(); 
 
-    std::string fileString = oss.str(); //puts the whole file into a string
+    std::string fileString = oss.str(); 
 
     torrentFile.close();
-    
-    std::cout << "file str length: " << fileString.length() << std::endl;
+
+    if (fileString.length() <= 0) {
+        std::cout << "error reading the torrent file or file doesn't exist." << std::endl;
+        exit(-1);
+    }
 
     return fileString;
 
 };
 
+/*
+    Decodes bencode int to a c++ string
+*/
+
 std::string decodeInt(std::string& torrentFileString, int& i) {
     int j = i;
     while (torrentFileString[j] != 'e') {
-        j++;                                //decodes bencode int
+        j++;                               
     }
     std::string decodedInt = torrentFileString.substr(i + 1, j-i-1);
     i = j + 1;
     return decodedInt;
 };
 
+/*
+    Decodes bencode string to a c++ string
+*/
+
 std::string decodeString(std::string& torrentFileString, int& i) {
     int j = i;
-    while (torrentFileString[j] != ':') {                   //decodes bencode string
+    while (torrentFileString[j] != ':') {              
         j++;
     }
     int stringLength = stoi(torrentFileString.substr(i,j));
@@ -49,10 +64,14 @@ std::string decodeString(std::string& torrentFileString, int& i) {
     return torrentFileString.substr(j+1, stringLength);
 }
 
+/*
+    Decodes bencode list to a vector
+*/
+
 std::vector<std::string> decodeList(std::string& torrentFileString, int& i) {
     std::string torrentListItem;
     std::vector<std::string> torrentContentList;
-    std::vector<std::string> listStack;             //decodes bencode list
+    std::vector<std::string> listStack;           
     listStack.push_back("l");
     i++;
 
@@ -77,6 +96,10 @@ std::vector<std::string> decodeList(std::string& torrentFileString, int& i) {
     return torrentContentList;
 };
 
+/*
+    Takes the .torrent file's piece hashes, and put them into a vector
+*/
+
 std::vector<std::string> createPieceHashArray(int& numOfPieces, std::string piecesString) {
     std::vector<std::string> pieceHashArray(numOfPieces);
 
@@ -86,7 +109,11 @@ std::vector<std::string> createPieceHashArray(int& numOfPieces, std::string piec
     return pieceHashArray;
 }
 
-std::vector<peer> decodePeers(std::string& announceContentString) {  //grabs ip addresses & ports of each peer
+/*
+    grabs ip and ports of each peer in the announce response
+*/
+
+std::vector<peer> decodePeers(std::string& announceContentString) { 
     int ipIndex = 0;                        
     std::vector<peer> peers;
     std::string ipString;
@@ -113,12 +140,15 @@ std::vector<peer> decodePeers(std::string& announceContentString) {  //grabs ip 
     return peers;
 }
 
+/*
+    Decodes whole torrent file, and puts it into a "torrentProperties" typedef
+*/
 
 
-torrentProperties decodeTorrent() {
+torrentProperties decodeTorrent(std::string filePath) {
     int i = 0;
 
-    std::string torrentFileString = torrentToString();
+    std::string torrentFileString = torrentToString(filePath);
 
     torrentProperties torrentContents;
 
@@ -126,24 +156,30 @@ torrentProperties decodeTorrent() {
     std::vector<std::string> torrentContentList;
 
     std::string infoHash;
-    int infoHashStartIndex;
+    int infoHashStartIndex = -1;
     int infoHashEndIndex;
 
     std::string torrentDataSection = "";    
     
     while (i < torrentFileString.length()-1) {
-        if (torrentFileString[i] == 'd' || torrentFileString[i] == 'e') {
+        if (torrentFileString[i] == 'd') {
+            i++;
+        }
+        else if (torrentFileString[i] == 'e') {
+            if (infoHashStartIndex != -1) {
+                infoHashEndIndex = i;
+            }
             i++;
         }
         else {
             if (torrentFileString[i] >= '0' && torrentFileString[i] <= '9') {
-                torrentContentString = decodeString(torrentFileString, i);         //if a bencoded string is encountered
+                torrentContentString = decodeString(torrentFileString, i);       
             }
             else if (torrentFileString[i] == 'i') {
-                torrentContentString = decodeInt(torrentFileString, i);             //if a bencoded int is encountered
+                torrentContentString = decodeInt(torrentFileString, i);        
             }
             else if (torrentFileString[i] == 'l') {
-                std::cout << "list dtart!!!!: " << i << std::endl;
+                //std::cout << "list dtart!!!!: " << i << std::endl;
                 torrentContentList = decodeList(torrentFileString, i);
             }
 
@@ -157,7 +193,7 @@ torrentProperties decodeTorrent() {
                 if (torrentDataSection == "announce") {
                     torrentContents.announce = torrentContentString;
                 }
-                else if (torrentDataSection == "announce-list") {
+                else if (torrentDataSection == "announce-list" || torrentDataSection == "url-list") {
                     torrentContents.announceList = torrentContentList;
                 }
                 else if (torrentDataSection == "comment") {
@@ -167,21 +203,20 @@ torrentProperties decodeTorrent() {
                     torrentContents.createdBy = torrentContentString;
                 }
                 else if (torrentDataSection == "creation date") {
-                    torrentContents.creationDate = std::stoi(torrentContentString);
+                    torrentContents.creationDate = std::stol(torrentContentString);
                 }
                 else if (torrentDataSection == "length") {
-                    torrentContents.length = std::stoi(torrentContentString);
+                    torrentContents.length = std::stol(torrentContentString);
                 }
                 else if (torrentDataSection == "name") {
                     torrentContents.name = torrentContentString;
                 }
                 else if (torrentDataSection == "piece length") {
-                    torrentContents.pieceLength = std::stoi(torrentContentString);
+                    torrentContents.pieceLength = std::stol(torrentContentString);
                 }
                 else if (torrentDataSection == "pieces") {
-                    infoHashEndIndex = i;
                     torrentContents.pieces = torrentContentString;
-                    torrentContents.infoHash = sha1Hash(torrentFileString.substr(infoHashStartIndex, infoHashEndIndex-infoHashStartIndex+1));
+                
                 } 
                 torrentDataSection = "";
             } 
@@ -189,7 +224,11 @@ torrentProperties decodeTorrent() {
 
 
     }
-    torrentContents.numOfPieces = std::ceil(torrentContents.length/torrentContents.pieceLength);
+    torrentContents.infoHash = sha1Hash(torrentFileString.substr(infoHashStartIndex, infoHashEndIndex-infoHashStartIndex+1));
+
+    torrentContents.numOfPieces = std::ceil(static_cast<float>(torrentContents.length)/static_cast<float>(torrentContents.pieceLength));
+    
+    torrentContents.partialPieceSize = torrentContents.length % torrentContents.pieceLength;
 
     torrentContents.pieceHashes = createPieceHashArray(torrentContents.numOfPieces, torrentContents.pieces);
 
@@ -197,8 +236,6 @@ torrentProperties decodeTorrent() {
     torrentContents.fileBuiltPieces = fileBuiltPieces;
     std::set<int> pq;
     torrentContents.piecesQueue = pq;
-
-    //torrentContents.fileBuiltPieces = std::vector<std::vector<unsigned char>>(torrentContents.numOfPieces, std::vector<unsigned char>(torrentContents.pieceLength, '0'));
 
 
     std::set<int> piecesToBeDownloadedSet;
@@ -208,14 +245,16 @@ torrentProperties decodeTorrent() {
 
     torrentContents.piecesToBeDownloadedSet = piecesToBeDownloadedSet;
     //torrentContents.infoHash = torrentFileString[infoHashEndIndex];
-    std::cout << "stsart index: " << torrentFileString[infoHashStartIndex] << std::endl;
+    //std::cout << "stsart index: " << torrentFileString[infoHashStartIndex] << std::endl;
     return torrentContents;
 };
 
+/*
+    Decodes bencode announce response
+*/
+
 announceProperties decodeAnnounceResponse(std::string& announceString) {
     int j = 0;
-    std::cout << "does the function run????" << std::endl;
-     std::cout << "announceString: " << announceString << std::endl;
     std::string announceContentString;  
     std::string announceDataSection = "";   
     announceProperties announceContents;
@@ -229,7 +268,6 @@ announceProperties decodeAnnounceResponse(std::string& announceString) {
                 announceContentString = decodeString(announceString, j);
             }
             else if (announceString[j] == 'i') {
-                std::cout << "number" << announceString[j] << std::endl;
                 announceContentString = decodeInt(announceString, j);
             }
             
@@ -238,12 +276,9 @@ announceProperties decodeAnnounceResponse(std::string& announceString) {
             }
             else {
                 if (announceDataSection == "interval") {
-                     //std::cout << "Interval waa: " << announceContentString << std::endl;
-                    std::cout << "Interval waa: " << announceContentString << std::endl;
                     announceContents.interval = std::stoi(announceContentString);
                 }
                 else if (announceDataSection == "peers") {
-                    std::cout << "peers: " << announceContentString << std::endl;
                     announceContents.peers = decodePeers(announceContentString);
                 }
                 announceDataSection = "";

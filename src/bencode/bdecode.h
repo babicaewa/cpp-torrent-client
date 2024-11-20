@@ -17,12 +17,13 @@ struct torrentProperties {
     std::vector<std::string> announceList;
     std::string comment;
     std::string createdBy;
-    int creationDate;
-    int length;
+    long creationDate;
+    long length;
     std::string name;
-    int pieceLength;
+    long pieceLength;
     std::string pieces;
     int numOfPieces;
+    int partialPieceSize;
     std::string infoHash;
     std::string peerID;
     std::vector<std::string> pieceHashes;
@@ -44,7 +45,7 @@ struct announceProperties {
     std::vector<peer> peers;
 };
 
-std::string torrentToString(std::ifstream torrentFile, int& i);
+std::string torrentToString(std::string filePath);
 
 std::string decodeInt(std::string& torrentFileString, int& i);
 
@@ -52,7 +53,7 @@ std::string decodeString(std::string& torrentFileString, int& i);
 
 std::vector<std::string> createPieceHashArray(int& numOfPieces, std::string piecesString);
 
-torrentProperties decodeTorrent();
+torrentProperties decodeTorrent(std::string filePath);
 
 announceProperties decodeAnnounceResponse(std::string& trackerResponse);
 

@@ -1,10 +1,13 @@
 #include <string>
-#include <iostream>
 #include "trackerInfo/trackerComm.h"
 #include "bencode/bdecode.h"
 #include <cstdlib>
 #include <curl/curl.h>
+#include <utils/utils.h>
 
+/*
+    Takes announce response and puts it into a string *TAKEN FROM YOUTUBE VIDEO*
+*/
 
 size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* userp) {
     size_t totalSize = size * nmemb;
@@ -12,17 +15,9 @@ size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* use
     return totalSize;
 }
 
-
-std::string generatePeerID() {
-    std::stringstream peerID;
-    unsigned char hexVal;
-    for (int j = 0; j < 20; ++j) {
-        hexVal = 97 + rand() % 25;
-        peerID << '%' << std::hex << std::setw(2) << std::setfill('0') << (int)hexVal;
-    }
-    return peerID.str();
-}
-
+/*
+    Formulates the URL announce query to send to the tracker
+*/
 
 std::string createAnnounceQuery(torrentProperties& torrentContents) {
 
@@ -33,14 +28,18 @@ std::string createAnnounceQuery(torrentProperties& torrentContents) {
 
     torrentContents.peerID = generatePeerID();
 
-    queryURL = torrentContents.announce + "?info_hash=" + torrentContents.infoHash + "&peer_id=" +
-    torrentContents.peerID + "&port=" + port + "&uploaded=0&downloaded=0&compact=1&left="+ std::to_string(torrentContents.length);
+    queryURL = torrentContents.announce + "?info_hash=" + hashToURLEncoding(torrentContents.infoHash) + "&peer_id=" +
+    hashToURLEncoding(torrentContents.peerID) + "&port=" + port + "&uploaded=0&downloaded=0&compact=1&left="+ std::to_string(torrentContents.length);
 
     return queryURL;
 };
 
+/*
+    Sends the URL announce query to the tracker
+*/
+
 std::string announceRequest(const std::string& query) {
-    std::cout << "Query: " << query << std::endl;
+    //std::cout << "Query: " << query << std::endl;
     CURL* curl;
     CURLcode res;
     std::string response;
@@ -66,6 +65,10 @@ std::string announceRequest(const std::string& query) {
     }
     return response;
 }
+
+/*
+    Main function to grab tracker info
+*/
 
 std::string communicateToTracker(torrentProperties& torrentContents) {
     std::string query = createAnnounceQuery(torrentContents);

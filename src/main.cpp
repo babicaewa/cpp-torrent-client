@@ -5,10 +5,13 @@
 #include "fileBuilder/fileBuilder.h"
 #include <thread>
 #include <mutex>
+#include <string>
 
-  // Function to print torrentProperties struct
+
+/*
+    Prints torrent properties to the console
+*/
   void printTorrentProperties(const torrentProperties &tp) {
-      // Print single properties
       std::cout << "Announce: " << tp.announce << std::endl;
       std::cout << "Comment: " << tp.comment << std::endl;
       std::cout << "Created By: " << tp.createdBy << std::endl;
@@ -17,15 +20,18 @@
       std::cout << "Name: " << tp.name << std::endl;
       std::cout << "Piece Length: " << tp.pieceLength << std::endl;
       std::cout << "Number of pieces: " << tp.numOfPieces << std::endl;
-      //std::cout << "Pieces: " << tp.pieces << std::endl;
+      std::cout << "Partial piece size: " << tp.partialPieceSize << std::endl;
       std::cout << "Info Hash: " << tp.infoHash << std::endl;
 
-      // Print announce list (vector)
       std::cout << "Announce List: " << tp.announceList.size() << std::endl;
       for (const auto &listItem : tp.announceList) {
           std::cout << "  - " << listItem << std::endl;
       }
   };
+
+/*
+    Prints tracker announce properties to the console
+*/
 
 void printAnnounceProperties(const announceProperties &ap) {
   std::cout << "Interval: " << ap.interval << std::endl;
@@ -35,38 +41,37 @@ void printAnnounceProperties(const announceProperties &ap) {
       }
 }
 
-int main() {
-  std::ifstream testFile("../res/debian-mac-12.7.0-amd64-netinst.iso.torrent");
+int main(int argc, char* argv[]) {
+  if (argc < 2) {
+    std::cout << "no file path given!" << std::endl;
+    return -1;
+  }
 
-  torrentProperties torrentContent = decodeTorrent();
+  torrentProperties torrentContent = decodeTorrent(std::string (argv[1]));
   std::string response = communicateToTracker(torrentContent);
   announceProperties announceContent = decodeAnnounceResponse(response);
 
-  printTorrentProperties(torrentContent);
-  printAnnounceProperties(announceContent);
+  //printTorrentProperties(torrentContent);
+  //printAnnounceProperties(announceContent);   // if you want to see how all properties get organized
 
   std::vector<std::thread> peerThreads(announceContent.peers.size());
 
   std::mutex queueMutex;
   for (int i= 0; i < announceContent.peers.size(); i++) {
     peerThreads[i] = std::thread(communicateWithPeers, std::ref(announceContent), std::ref(torrentContent), std::ref(announceContent.peers[i]), std::ref(queueMutex));
-    //peerThreads[i].join();
   }
   for (int j=0; j < announceContent.peers.size(); j++) {
     peerThreads[j].join();
   }
 
-  std::cout << "all pieces: (";
-  for (int j=0; j < torrentContent.fileBuiltPieces.size(); j++) {
-    std::cout << j<< ", ";
+  if(torrentContent.fileBuiltPieces.size() != torrentContent.numOfPieces) {
+    std::cout << "failed to download all pieces!" << std::endl;
+    return -1;
   }
-  std::cout << ")" << std::endl;
-
-  std::cout << "finally all done :)" << std::endl;
-  //communicateWithPeers(announceContent, torrentContent);
+  std::cout << "Downloaded all pieces successfully" << std::endl;
   bool fileBuilt = buildFile(torrentContent.fileBuiltPieces, torrentContent.name);
   if (fileBuilt) {
-    std::cout << "successfully built the file and put it in the 'downloadedFiles' directory" << std::endl;
+    std::cout << "successfully built the file and put it in the 'downloaded_files' directory" << std::endl;
   }
   
 };

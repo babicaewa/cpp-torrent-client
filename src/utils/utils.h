@@ -1,6 +1,17 @@
-#ifndef TRACKERCOMM_H
-#define TRACKERCOMM_H
+#include <vector>
+#include <string>
 
-void displayProgressBar(int currVal, int totalVal);
+#ifndef UTILS_H
+#define UTILS_H
+
+void displayProgressBar(float currVal, float totalVal);
+
+std::string generatePeerID();
+
+std::string hashToURLEncoding(std::string& hashedString);
+
+std::vector<unsigned char> decodeHashStringtoPureHex(std::string hashedString);
+
+std::string decodeHashStringToBinary(std::string& hashString);
 
 #endif
