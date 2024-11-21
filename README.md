@@ -20,7 +20,7 @@ Once you clone the repository follow these steps:
 
 1. `debian-mac-12.7.0-amd64-netinst.iso` -> ~660 mb -> piece size: 256kb -> no partial pieces
  - Link: https://youtu.be/6AmMXIZMFLw
-3. `2024-11-13-raspios-bookworm-armhf-lite.img.xz` -> ~535 mb -> piece size: 256mb -> partial piece
+3. `2024-11-13-raspios-bookworm-armhf-lite.img.xz` -> ~535 mb -> piece size: 256kb -> partial piece
  - Link: https://youtu.be/5pi72exMEig
 3. `2024-11-13-raspios-bookworm-armhf-full.img.xz` -> ~2.86 gb -> piece size: 2mb -> partial piece
  - Link: https://youtu.be/WWF4WK7AbvQ
